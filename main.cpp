@@ -368,41 +368,45 @@ float readfloat(void* data){
     return *(reinterpret_cast<float*>(rd));
 }
 
-int main(){
+int initContextEGL(){
 //    auto eglGetPlatformDisplayEXT =
 //            (PFNEGLGETPLATFORMDISPLAYEXTPROC)
 //                    eglGetProcAddress("eglGetPlatformDisplayEXT");
 //
 //    EGLDisplay display= eglGetPlatformDisplayEXT(EGL_PLATFORM_DEVICE_EXT,
 //                                      EGL_DEFAULT_DISPLAY, nullptr);
-////    EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-//    if(display == EGL_NO_DISPLAY){
-//        std::cout << "No display!" << std::endl;
-//        printEGLError();
-//        return 0;
-//    }
-//    std::cout << "Got display" << std::endl;
-//    EGLint major, minor;
-//    eglInitialize(display, &major, &minor);
-//    std::cout << "Version: "<<major<<"."<<minor << std::endl;
-//    std::cout << "Vendor: "<<eglQueryString(display, EGL_VENDOR) << std::endl;
-//    std::cout << "Client APIs: "<<eglQueryString(display, EGL_CLIENT_APIS) << std::endl;
-//    std::cout << "Extensions: "<<eglQueryString(display, EGL_EXTENSIONS) << std::endl;
-//    EGLint numConfigs;
-//    EGLConfig conf;
-//    eglChooseConfig(display, configAttribs, &conf, 1, &numConfigs);
-//    std::cout << "Got "<<numConfigs<<" configs!"<<std::endl;
-//    eglBindAPI(EGL_OPENGL_API);
-//    EGLContext ctx = eglCreateContext(display, conf, EGL_NO_CONTEXT, contextConfig);
-//    if(ctx == EGL_NO_CONTEXT){
-//        std::cout << "Failed to create context!" << std::endl;
-//        printEGLError();
-//        return 0;
-//    }
-//    if(!eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, ctx)){
-//        printEGLError();
-//        return 0;
-//    }
+    EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    if(display == EGL_NO_DISPLAY){
+        std::cout << "No display!" << std::endl;
+        printEGLError();
+        return -1;
+    }
+    std::cout << "Got display" << std::endl;
+    EGLint major, minor;
+    eglInitialize(display, &major, &minor);
+    std::cout << "Version: "<<major<<"."<<minor << std::endl;
+    std::cout << "Vendor: "<<eglQueryString(display, EGL_VENDOR) << std::endl;
+    std::cout << "Client APIs: "<<eglQueryString(display, EGL_CLIENT_APIS) << std::endl;
+    std::cout << "Extensions: "<<eglQueryString(display, EGL_EXTENSIONS) << std::endl;
+    EGLint numConfigs;
+    EGLConfig conf;
+    eglChooseConfig(display, configAttribs, &conf, 1, &numConfigs);
+    std::cout << "Got "<<numConfigs<<" configs!"<<std::endl;
+    eglBindAPI(EGL_OPENGL_API);
+    EGLContext ctx = eglCreateContext(display, conf, EGL_NO_CONTEXT, contextConfig);
+    if(ctx == EGL_NO_CONTEXT){
+        std::cout << "Failed to create context!" << std::endl;
+        printEGLError();
+        return -1;
+    }
+    if(!eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, ctx)){
+        printEGLError();
+        return -1;
+    }
+    return 0;
+}
+
+int initContextGLUT(){
     int argc = 1;
     const char thingy[] = "dummy";
     char* argv = static_cast<char*> (malloc(sizeof(thingy)));
@@ -412,6 +416,115 @@ int main(){
     glutInitContextVersion (4, 5);
     glutInitContextFlags (GLUT_FORWARD_COMPATIBLE | GLUT_DEBUG);
     int window = glutCreateWindow("Palettegen - don't touch this!");
+    return 0;
+}
+
+void printStructData(GLuint prog){
+    GLint indices[3];
+    indices[0] = glGetProgramResourceIndex(prog, GL_SHADER_STORAGE_BLOCK, "edges");
+    indices[1] = glGetProgramResourceIndex(prog, GL_SHADER_STORAGE_BLOCK, "tris");
+    indices[2] = glGetProgramResourceIndex(prog, GL_SHADER_STORAGE_BLOCK, "pyras");
+    for(int ci = 0; ci < 3; ci++) {
+        GLint nav;
+        GLenum props_nav[] = {GL_NUM_ACTIVE_VARIABLES};
+        GLenum props_avi[] = {GL_ACTIVE_VARIABLES};
+        GLenum props_acp[] = {GL_NAME_LENGTH, GL_TYPE, GL_OFFSET, GL_ARRAY_STRIDE, GL_TOP_LEVEL_ARRAY_SIZE,
+                              GL_TOP_LEVEL_ARRAY_STRIDE, GL_MATRIX_STRIDE, GL_IS_ROW_MAJOR};
+        GLint len, lenb;
+        glGetProgramResourceiv(prog, GL_SHADER_STORAGE_BLOCK, indices[ci], 1, props_nav, 1, &len, &nav);
+        GLint *indi = new int[nav];
+        glGetProgramResourceiv(prog, GL_SHADER_STORAGE_BLOCK, indices[ci], 1, props_avi, nav, &len, indi);
+        for (int i = 0; i < len; i++) {
+            GLint values[8];
+            glGetProgramResourceiv(prog, GL_BUFFER_VARIABLE, indi[i], 8, props_acp, 8, &lenb, values);
+            char *name = new char[values[0]];
+            glGetProgramResourceName(prog, GL_BUFFER_VARIABLE, indi[i], values[0], nullptr, name);
+            std::cout << "Variable " << i << ": " << name << " : " << glTypeToString(values[1]) << " - offset "
+                      << values[2] << " - stride " << values[3] << " - TLoffset " << values[4] << " - TLstride "
+                      << values[5] << " - matrix stride "<<values[6] << " - "<<(values[7]?"":"not ") << "row-major"<<std::endl;
+            delete[](name);
+        }
+        delete[] indi;
+    }
+
+    std::cout << "Triangle struct size: "<<sizeof(triangle)<<std::endl;
+    std::cout << "Triangle invm offset: "<<offsetof(triangle, invm)<<std::endl;
+    std::cout << "Triangle vertices offset: "<<offsetof(triangle, vert1)<<std::endl;
+    std::cout << "Triangle edgl offset: "<<offsetof(triangle, edgl)<<std::endl;
+    std::cout << "Pyramid struct size: "<<sizeof(pyramid)<<std::endl;
+    std::cout << "Pyramid invm offset: "<<offsetof(pyramid, invm)<<std::endl;
+    std::cout << "Pyramid vertices offset: "<<offsetof(pyramid, vert1)<<std::endl;
+    std::cout << "Pyramid edgl offset: "<<offsetof(pyramid, edgl)<<std::endl;
+}
+
+void loadPalette(){
+    FILE* fin = fopen("out.data", "rb");
+    unsigned char buffer[80];
+    GLuint ssbos[3];
+    glGenBuffers(3, ssbos);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbos[0]);
+    fread(buffer, 4, 1, fin);
+    int num = (unsigned int)buffer[3] | (unsigned int)buffer[2]<<8u | (unsigned int)buffer[1]<<16u | (unsigned int)buffer[0]<<24u;
+    int* linedata = new int[2*num];
+    std::cout << "Lines: "<<num<<std::endl;
+    for(int i = 0; i < num; i++){
+        fread(buffer, 2, 1, fin);
+        linedata[2*i] = buffer[0];
+        linedata[2*i+1] = buffer[1];
+    }
+
+
+    glBufferData(GL_SHADER_STORAGE_BUFFER, 8*num, linedata, GL_STATIC_COPY);
+    delete[] linedata;
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssbos[0]);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbos[1]);
+    fread(buffer, 4, 1, fin);
+    num = (unsigned int)buffer[3] | (unsigned int)buffer[2]<<8u | (unsigned int)buffer[1]<<16u | (unsigned int)buffer[0]<<24u;
+    std::cout << "Triangles: "<<num<<", requiring "<<(sizeof(triangle)*num) << " bytes"<<std::endl;
+    auto* tridata = new triangle[num];
+    for(int i = 0; i < num; i++){
+        triangle* ctri = &tridata[i];
+        fread(buffer, 44, 1, fin);
+        ctri -> vert1 = buffer[0];
+        ctri -> vert2 = buffer[1];
+        ctri -> vert3 = buffer[2];
+        ctri -> edgl = readfloat(&buffer[4]);
+        for(int y = 0; y < 3; y++)
+            for(int x = 0; x < 3; x++){
+                ctri -> invm[y][x] = readfloat(&buffer[8+4*(3*y+x)]);
+            }
+    }
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(triangle)*num, tridata, GL_STATIC_COPY);
+    delete[] tridata;
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssbos[1]);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbos[2]);
+
+
+    fread(buffer, 4, 1, fin);
+    num = (unsigned int)buffer[3] | (unsigned int)buffer[2]<<8u | (unsigned int)buffer[1]<<16u | (unsigned int)buffer[0]<<24u;
+    std::cout << "Pyramids: "<<num<<", requiring "<<(sizeof(pyramid)*num) << " bytes"<<std::endl;
+    auto* pydata = new pyramid[num];
+    for(int i = 0; i < num; i++){
+        pyramid* ctri = &pydata[i];
+        fread(buffer, 44, 1, fin);
+        ctri -> vert1 = buffer[0];
+        ctri -> vert2 = buffer[1];
+        ctri -> vert3 = buffer[2];
+        ctri -> vert4 = buffer[3];
+        ctri -> edgl = readfloat(&buffer[4]);
+        for(int y = 0; y < 3; y++)
+            for(int x = 0; x < 3; x++){
+                ctri -> invm[y][x] = readfloat(&buffer[8+4*(3*y+x)]);
+            }
+    }
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(pyramid)*num, pydata, GL_STATIC_COPY);
+    delete[] pydata;
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbos[2]);
+    fclose(fin);
+}
+
+int main(){
+    if(!initContextGLUT()) return 1;
     GLenum err = glewInit();
     if(err != GLEW_OK && err != GLEW_ERROR_NO_GLX_DISPLAY){
         std::cout << "GLEW error: "<<glewGetErrorString(err) <<" ("<<err<<")"<< std::endl;
@@ -462,43 +575,6 @@ int main(){
     glUseProgram(prog);
 
 
-    GLint indices[3];
-    indices[0] = glGetProgramResourceIndex(prog, GL_SHADER_STORAGE_BLOCK, "edges");
-    indices[1] = glGetProgramResourceIndex(prog, GL_SHADER_STORAGE_BLOCK, "tris");
-    indices[2] = glGetProgramResourceIndex(prog, GL_SHADER_STORAGE_BLOCK, "pyras");
-    for(int ci = 0; ci < 3; ci++) {
-        GLint nav;
-        GLenum props_nav[] = {GL_NUM_ACTIVE_VARIABLES};
-        GLenum props_avi[] = {GL_ACTIVE_VARIABLES};
-        GLenum props_acp[] = {GL_NAME_LENGTH, GL_TYPE, GL_OFFSET, GL_ARRAY_STRIDE, GL_TOP_LEVEL_ARRAY_SIZE,
-                              GL_TOP_LEVEL_ARRAY_STRIDE, GL_MATRIX_STRIDE, GL_IS_ROW_MAJOR};
-        GLint len, lenb;
-        glGetProgramResourceiv(prog, GL_SHADER_STORAGE_BLOCK, indices[ci], 1, props_nav, 1, &len, &nav);
-        GLint *indi = new int[nav];
-        glGetProgramResourceiv(prog, GL_SHADER_STORAGE_BLOCK, indices[ci], 1, props_avi, nav, &len, indi);
-        for (int i = 0; i < len; i++) {
-            GLint values[8];
-            glGetProgramResourceiv(prog, GL_BUFFER_VARIABLE, indi[i], 8, props_acp, 8, &lenb, values);
-            char *name = new char[values[0]];
-            glGetProgramResourceName(prog, GL_BUFFER_VARIABLE, indi[i], values[0], nullptr, name);
-            std::cout << "Variable " << i << ": " << name << " : " << glTypeToString(values[1]) << " - offset "
-                      << values[2] << " - stride " << values[3] << " - TLoffset " << values[4] << " - TLstride "
-                      << values[5] << " - matrix stride "<<values[6] << " - "<<(values[7]?"":"not ") << "row-major"<<std::endl;
-            delete[](name);
-        }
-        delete[] indi;
-    }
-
-    std::cout << "Triangle struct size: "<<sizeof(triangle)<<std::endl;
-    std::cout << "Triangle invm offset: "<<offsetof(triangle, invm)<<std::endl;
-    std::cout << "Triangle vertices offset: "<<offsetof(triangle, vert1)<<std::endl;
-    std::cout << "Triangle edgl offset: "<<offsetof(triangle, edgl)<<std::endl;
-    std::cout << "Pyramid struct size: "<<sizeof(pyramid)<<std::endl;
-    std::cout << "Pyramid invm offset: "<<offsetof(pyramid, invm)<<std::endl;
-    std::cout << "Pyramid vertices offset: "<<offsetof(pyramid, vert1)<<std::endl;
-    std::cout << "Pyramid edgl offset: "<<offsetof(pyramid, edgl)<<std::endl;
-
-
     auto fd = new float[204*3];
     copyColorsToBufDIN(fd);
     glUniform3fv(glGetUniformLocation(prog, "dinpal"), 204, fd);
@@ -506,66 +582,7 @@ int main(){
     glUniform3fv(glGetUniformLocation(prog, "xyzpal"), 204, fd);
     delete[] fd;
     GLuint blueUni = glGetUniformLocation(prog, "blue");
-    FILE* fin = fopen("out.data", "rb");
-    unsigned char buffer[80];
-    GLuint ssbos[3];
-    glGenBuffers(3, ssbos);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbos[0]);
-    fread(buffer, 4, 1, fin);
-    int num = (unsigned int)buffer[3] | (unsigned int)buffer[2]<<8u | (unsigned int)buffer[1]<<16u | (unsigned int)buffer[0]<<24u;
-    int* linedata = new int[2*num];
-    std::cout << "Lines: "<<num<<std::endl;
-    for(int i = 0; i < num; i++){
-        fread(buffer, 2, 1, fin);
-        linedata[2*i] = buffer[0];
-        linedata[2*i+1] = buffer[1];
-    }
-    glBufferData(GL_SHADER_STORAGE_BUFFER, 8*num, linedata, GL_STATIC_COPY);
-    delete[] linedata;
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssbos[0]);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbos[1]);
-    fread(buffer, 4, 1, fin);
-    num = (unsigned int)buffer[3] | (unsigned int)buffer[2]<<8u | (unsigned int)buffer[1]<<16u | (unsigned int)buffer[0]<<24u;
-    std::cout << "Triangles: "<<num<<", requiring "<<(sizeof(triangle)*num) << " bytes"<<std::endl;
-    auto* tridata = new triangle[num];
-    for(int i = 0; i < num; i++){
-        triangle* ctri = &tridata[i];
-        fread(buffer, 44, 1, fin);
-        ctri -> vert1 = buffer[0];
-        ctri -> vert2 = buffer[1];
-        ctri -> vert3 = buffer[2];
-        ctri -> edgl = readfloat(&buffer[4]);
-        for(int y = 0; y < 3; y++)
-            for(int x = 0; x < 3; x++){
-                ctri -> invm[y][x] = readfloat(&buffer[8+4*(3*y+x)]);
-            }
-    }
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(triangle)*num, tridata, GL_STATIC_COPY);
-    delete[] tridata;
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssbos[1]);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbos[2]);
-
-
-    fread(buffer, 4, 1, fin);
-    num = (unsigned int)buffer[3] | (unsigned int)buffer[2]<<8u | (unsigned int)buffer[1]<<16u | (unsigned int)buffer[0]<<24u;
-    std::cout << "Pyramids: "<<num<<", requiring "<<(sizeof(pyramid)*num) << " bytes"<<std::endl;
-    auto* pydata = new pyramid[num];
-    for(int i = 0; i < num; i++){
-        pyramid* ctri = &pydata[i];
-        fread(buffer, 44, 1, fin);
-        ctri -> vert1 = buffer[0];
-        ctri -> vert2 = buffer[1];
-        ctri -> vert3 = buffer[2];
-        ctri -> vert4 = buffer[3];
-        ctri -> edgl = readfloat(&buffer[4]);
-        for(int y = 0; y < 3; y++)
-            for(int x = 0; x < 3; x++){
-                ctri -> invm[y][x] = readfloat(&buffer[8+4*(3*y+x)]);
-            }
-    }
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(pyramid)*num, pydata, GL_STATIC_COPY);
-    delete[] pydata;
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbos[2]);
+    loadPalette();
 
     auto data = new GLubyte[256*256*256*8];
     GLubyte* datap;
@@ -591,7 +608,6 @@ int main(){
 //        auto ss = std::ostringstream();
 //        ss << "partimgs/img"<<b<<".png";
 //        lodepng::encode(ss.str(), datap, 256, 256);
-//if(b==1) return 5;
         auto renderend = std::chrono::system_clock::now();
         std::chrono::duration<double> elapsed_secondsss = renderend-start;
         std::chrono::duration<double> elapsed_seconds = renderend-renderstart;
@@ -607,11 +623,11 @@ int main(){
         lss << std::setw(3) << std::setfill('0') << b;
         std::string cit = lss.str();
         auto file = std::fstream("palparts/palA"+cit+".bin", std::ios::out | std::ios::binary);
-        file.write(reinterpret_cast<char *>(&data[256*256*b*8]), 256 * 256 * 4);
+        file.write(reinterpret_cast<char *>(&data[256*256*b*8]), 256 * 256 * 8);
         file.flush();
         file.close();
         file = std::fstream("palparts/palB"+cit+".bin", std::ios::out | std::ios::binary);
-        file.write(reinterpret_cast<char *>(&data[256*256*(b+256)*4]), 256 * 256 * 4);
+        file.write(reinterpret_cast<char *>(&data[256*256*(b+256)*4]), 256 * 256 * 8);
         file.flush();
         file.close();
     }
@@ -621,8 +637,7 @@ int main(){
     std::time_t end_time = std::chrono::system_clock::to_time_t(end);
     std::cout << "finished computation at " << std::ctime(&end_time) << "elapsed time: " << elapsed_seconds.count() << "s" << std::endl;
     auto file = std::fstream("palette.bin", std::ios::out | std::ios::binary);
-    file.write(reinterpret_cast<char *>(data), 256 * 256 * 256 * 8);
+    file.write(reinterpret_cast<char *>(&data[0]), 256 * 256 * 256 * 8);
     file.flush();
     file.close();
-//    eglTerminate(display);
 }
