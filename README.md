@@ -2,7 +2,7 @@
 Dithers the MC palette, or any palette
 
 # How to access the palette
-It's zipped and stored in out.zip. See Ditherer.java for it's layout.
+It's zipped and stored in `palette.zip`. See `Ditherer.java` for it's layout.
 
 ## Why?
 Minecraft is a game made by Mojang. In there, there are maps which can be used to display arbitrary images. Unfortunately these images are constrained by a palette of usable colors, which at the time of writing contains 204 entries.
