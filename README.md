@@ -6,8 +6,10 @@ It's zipped and stored in `palette.zip`. See `Ditherer.java` for it's layout.
 
 ## Why?
 Minecraft is a game made by Mojang. In there, there are maps which can be used to display arbitrary images. Unfortunately these images are constrained by a palette of usable colors, which at the time of writing contains 204 entries.
+
 It's an accepted solution to dither colors in order to get the human eye to perceive more colors than there actually are. For more information on dithering, see [Numberphile's videos on them](https://www.youtube.com/watch?v=IviNO7iICTM&t=383s).
-I needed a solution that is both fast and in-place / runnable on a GPU. So I came up with this palette-based approach. Since there are only about 16 million colors, and modern GPUs have a multiple of that as available memory, we can save some of that to store a table telling us which RGB colors maps to which palette colors in what order.
+
+I needed a solution that is both fast and in-place / runnable on a GPU. So I came up with this palette-based approach. Since there are only about 16 million colors, and modern GPUs have a multiple of that as available memory, we can savely use some of that to store a table telling us which RGB colors maps to which palette colors in what order.
 
 ## What algorithm is used
 This algorithm is based on and adapted from [Yliluoma's ordered dithering algorithm](https://bisqwit.iki.fi/story/howto/dither/jy/). A short description is:
