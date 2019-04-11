@@ -25,6 +25,8 @@ This algorithm is based on and adapted from [Yliluoma's ordered dithering algori
 
 Steps 1..3 are handled by the python script, Step 4 is in OpenGL, Step 5 is in C++, and Step 6 is left to the reader.
 
+I accept all edges/pyramids as long as the colors defining them have a dE of 37 or less.
+
 ### On colorspaces
 One might think that we can compute the closest point on the line using linear algebra. The problem with that approach is that we determine the distance between two colors using the DIN colorspace, while the line, having abstracted all possible mixtures of two RGB pixels on a screen, is only a line in RGB colorspace. Since the transformation from RGB to DIN is nonlinear, the line ends up being curve. Finding the nearest point on an arbitrary curve is nontrivial.
 
@@ -33,6 +35,7 @@ Similarly, the same problem exists for triangles, or the mixing product of three
 This does not apply to 4-vertix polygons. If a point is in them, the error is 0 since we can exactly reach that point by appropiately mixing the colors together. Therefore we don't need to compute color distances here, so we can stay within RGB (or XYZ) colorspace. This means however that poins outside a polygon will not be projected on the polygon's face.
 
 ## On the code
+#### You do not need to run the code yourself. The result is already there and computed in palette.bin.gz. You only need to run this if you want different parameters
 The code in here was 'quickly' hacked together over the course of a week. Don't expect it to work on your machine. It's supposed to do one job, which it does, while staying easily hackable.
 
 Most importantly, the fragment shader runs for 17 seconds on my machine (GTX 1060M). On Linux, you can modify the Xorg config file to tell the NVidia driver to not kill shaders when they run for longer than a few seconds - google "nvidia xorg interactive". I don't know whether this is possible on Linux.
